@@ -111,3 +111,8 @@ class IndicatorBar:
 
             # Make sure full_box is to the left of the bar instead of the middle
             self.full_box.left = self._center_x - (self._box_width // 2)
+
+    def delete(self):
+        """Delete indicator bar"""
+        self._full_box.remove_from_sprite_lists()
+        self._background_box.remove_from_sprite_lists()

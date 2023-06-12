@@ -9,12 +9,13 @@ python -m arcade.examples.astar_pathfinding
 
 import arcade
 import random
+import math
+from bullet_handler import BulletHandler
 
 import config
 from enemy_movement import EnemyMovementController
 from sprites.zombie import Zombie
 from sprites.player import Player
-
 
 class MyGame(arcade.Window):
     """
@@ -34,6 +35,7 @@ class MyGame(arcade.Window):
         self.wall_list = None
         self.enemy_list = None
         self.bar_list = None
+        self.bullet_list = None
 
         # Set up the player info
         self.player = None
@@ -46,6 +48,7 @@ class MyGame(arcade.Window):
 
         self.physics_engine = None
         self.enemy_movement_controller = None
+        self.bullet_handler = None
 
         # --- Related to paths
         # List of points that makes up a path between two points
@@ -60,6 +63,8 @@ class MyGame(arcade.Window):
         # Set the window background color
         self.background_color = arcade.color.AMAZON
 
+        self.score = 0
+
     def setup(self):
         """ Set up the game and initialize the variables. """
 
@@ -69,6 +74,7 @@ class MyGame(arcade.Window):
                                            spatial_hash_cell_size=128)
         self.enemy_list = arcade.SpriteList()
         self.bar_list = arcade.SpriteList()
+        self.bullet_list = arcade.SpriteList()
 
         # Set up the player
 
@@ -86,12 +92,11 @@ class MyGame(arcade.Window):
                 if not arcade.check_for_collision_with_list(enemy, self.wall_list):
                     self.enemy_list.append(enemy)
                     break
-            print(i)
 
         spacing = config.SPRITE_SIZE * 3
         for column in range(10):
             for row in range(15):
-                sprite = arcade.Sprite(":resources:images/tiles/boxCrate_single.png",
+                sprite = arcade.Sprite(arcade.resources.image_box_crate_single,
                                        config.SPRITE_SCALING)
 
                 x = (column + 1) * spacing
@@ -112,6 +117,7 @@ class MyGame(arcade.Window):
 
         self.enemy_movement_controller = EnemyMovementController(
             self.enemy_list, self.player, self.wall_list)
+        self.bullet_handler = BulletHandler(self.player, self.bullet_list, self.enemy_list, self.wall_list)
 
     def on_draw(self):
         """
@@ -125,10 +131,9 @@ class MyGame(arcade.Window):
         self.wall_list.draw()
         self.enemy_list.draw()
         self.bar_list.draw()
+        self.bullet_list.draw()
 
         for enemy in self.enemy_list:
-            """ print("draw") """
-            #print(enemy.position, enemy.position_list[-1], self.player.position)
             if self.player.position != enemy.position and arcade.has_line_of_sight(self.player.position,
                                                                                    enemy.position,
                                                                                    self.wall_list):
@@ -141,6 +146,8 @@ class MyGame(arcade.Window):
                              enemy.center_y,
                              color,
                              2)
+        output = f"Score: {self.score}"
+        arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
         """ if self.path:
             arcade.draw_line_strip(self.path, arcade.color.BLUE, 2) """
 
@@ -150,8 +157,6 @@ class MyGame(arcade.Window):
         # Calculate speed based on the keys pressed
         self.player.change_x = 0
         self.player.change_y = 0
-        """ print("on update") """
-        #print(delta_time)
 
         if self.up_pressed and not self.down_pressed:
             self.player.change_y = config.MOVEMENT_SPEED
@@ -165,8 +170,8 @@ class MyGame(arcade.Window):
         # Update the character
         self.physics_engine.player_sprite.update_bar_position()
         self.physics_engine.update()
-        self.enemy_movement_controller.update()
-        # print(self.path,"->", self.player.position)
+        self.enemy_movement_controller.update(delta_time)
+        self.score += self.bullet_handler.update()
 
         # --- Manage Scrolling ---
 
@@ -211,29 +216,37 @@ class MyGame(arcade.Window):
                                 config.SCREEN_WIDTH + self.view_left,
                                 self.view_bottom,
                                 config.SCREEN_HEIGHT + self.view_bottom)
+            
+    def on_mouse_press(self, x, y, button, modifiers):
+        """ Called whenever the mouse button is clicked. """
+        if self.player.health <= 0:
+            return
+        self.bullet_handler.mouse_press(x,y, self.view_left, self.view_bottom)
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
-
-        if key == arcade.key.UP:
+        if self.player.health <= 0:
+            return
+        if key in [arcade.key.UP, arcade.key.W]:
             self.up_pressed = True
-        elif key == arcade.key.DOWN:
+        elif key in [arcade.key.DOWN, arcade.key.S]:
             self.down_pressed = True
-        elif key == arcade.key.LEFT:
+        elif key in [arcade.key.LEFT, arcade.key.A]:
             self.left_pressed = True
-        elif key == arcade.key.RIGHT:
+        elif key in [arcade.key.RIGHT, arcade.key.D]:
             self.right_pressed = True
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
-
-        if key == arcade.key.UP:
+        if self.player.health <= 0:
+            return
+        if key in [arcade.key.UP, arcade.key.W]:
             self.up_pressed = False
-        elif key == arcade.key.DOWN:
+        elif key in [arcade.key.DOWN, arcade.key.S]:
             self.down_pressed = False
-        elif key == arcade.key.LEFT:
+        elif key in [arcade.key.LEFT, arcade.key.A]:
             self.left_pressed = False
-        elif key == arcade.key.RIGHT:
+        elif key in [arcade.key.RIGHT, arcade.key.D]:
             self.right_pressed = False
 
 

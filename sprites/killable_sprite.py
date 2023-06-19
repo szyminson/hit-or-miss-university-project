@@ -11,7 +11,7 @@ class KillableSprite(Sprite):
         self.indicator_bar: IndicatorBar = IndicatorBar(
             self, bar_list, (self.center_x, self.center_y)
         )
-        self.health: int = 100
+        self.health: int = self.max_health
 
     def update_bar_position(self):
         self.indicator_bar.position = (
